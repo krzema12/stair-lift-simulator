@@ -56,12 +56,8 @@ class MonkeyScene : Scene() {
             }
 
             val library = resourcesVfs["StairLift.dae"].readColladaLibrary()
-            val models = library.geometryDefs.values
-            models.forEachIndexed { index, model ->
-                mesh(model.mesh)
-                        .position(index.toFloat()*3.0f, 0.0f, 0.0f)
-                        .rotation(-90.degrees, 0.degrees, 0.degrees)
-            }
+            val mainSceneView = library.mainScene.instantiate()
+            this += mainSceneView
 
             var tick = 0
             addUpdater {
