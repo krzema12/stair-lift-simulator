@@ -67,7 +67,7 @@ class MonkeyScene : Scene() {
                     cos(angle * 1) * 4, 2.0, -sin(angle * 1) * 4, // Orbiting camera
                     0.0, 0.0, 0.0
                 )
-                sideFlap?.rotation(Angle.fromDegrees(tick), Angle.fromDegrees(0), Angle.fromDegrees(0))
+                sideFlap?.rotationX = Angle.fromDegrees(tick)
                 tick++
             }
 
