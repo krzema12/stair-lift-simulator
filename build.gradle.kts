@@ -1,29 +1,24 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.soywiz.korge.gradle.KorgeGradlePlugin
+import com.soywiz.korge.gradle.korge
 
-plugins {
-    kotlin("jvm") version "1.4.20"
-    application
+buildscript {
+    repositories {
+        mavenLocal()
+        maven { url = uri("https://dl.bintray.com/korlibs/korlibs") }
+        maven { url = uri("https://plugins.gradle.org/m2/") }
+        mavenCentral()
+        google()
+    }
+    dependencies {
+        classpath("com.soywiz.korlibs.korge.plugins:korge-gradle-plugin:2.0.0.1")
+    }
 }
 
-group = "it.krzeminski"
-version = "1.0-SNAPSHOT"
+apply<KorgeGradlePlugin>()
 
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test-junit"))
-}
-
-tasks.test {
-    useJUnit()
-}
-
-tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-application {
-    mainClassName = "MainKt"
+korge {
+    id = "com.soywiz.samples.korge3d"
+    supportExperimental3d()
+    targetDefault()
 }
