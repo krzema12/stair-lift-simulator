@@ -6,6 +6,7 @@ import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
 import com.soywiz.korge3d.*
 import com.soywiz.korge3d.format.*
+import com.soywiz.korge3d.tween.moveBy
 import com.soywiz.korim.color.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
@@ -34,12 +35,7 @@ class RootScene : Scene() {
     override suspend fun Container.sceneInit() {
         contentSceneContainer = sceneContainer(views)
 
-        sceneButton<MonkeyScene>("Monkey", 0)
-    }
-
-    inline fun <reified T : Scene> Container.sceneButton(title: String, x: Int) {
-        this += Button(title) { contentSceneContainer.changeToDisablingButtons<T>(this) }
-            .position(8 + x * 200, views.virtualHeight - 48)
+        contentSceneContainer.changeTo<MonkeyScene>()
     }
 }
 
@@ -59,9 +55,13 @@ class MonkeyScene : Scene() {
                 }
             }
 
-            val library = resourcesVfs["monkey-smooth.dae"].readColladaLibrary()
-            val model = library.geometryDefs.values.first()
-            val view = mesh(model.mesh).rotation(-90.degrees, 0.degrees, 0.degrees)
+            val library = resourcesVfs["StairLift.dae"].readColladaLibrary()
+            val models = library.geometryDefs.values
+            models.forEachIndexed { index, model ->
+                mesh(model.mesh)
+                        .position(index.toFloat()*3.0f, 0.0f, 0.0f)
+                        .rotation(-90.degrees, 0.degrees, 0.degrees)
+            }
 
             var tick = 0
             addUpdater {
