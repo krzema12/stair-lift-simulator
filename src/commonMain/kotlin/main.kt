@@ -57,17 +57,20 @@ class MonkeyScene : Scene() {
 
             val library = resourcesVfs["StairLift.dae"].readColladaLibrary()
             val mainSceneView = library.mainScene.instantiate()
+            val sideFlap = mainSceneView["Scene"]["Side flap"]
             this += mainSceneView
 
             var tick = 0
             addUpdater {
                 val angle = (tick / 1.0).degrees
                 camera.positionLookingAt(
-                    cos(angle * 1) * 4, 0.0, -sin(angle * 1) * 4, // Orbiting camera
+                    cos(angle * 1) * 4, 2.0, -sin(angle * 1) * 4, // Orbiting camera
                     0.0, 0.0, 0.0
                 )
+                sideFlap?.rotation(Angle.fromDegrees(tick), Angle.fromDegrees(0), Angle.fromDegrees(0))
                 tick++
             }
+
         }
     }
 
