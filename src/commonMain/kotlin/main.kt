@@ -11,7 +11,7 @@ suspend fun main() = Korge(Korge.Config(module = StairLiftSimulatorModule()))
 @Korge3DExperimental
 class StairLiftSimulatorModule : KorgeModule(RootScene::class) {
     override val size: SizeInt = SizeInt(1280, 720)
-    override val title: String = "KorGE 3D"
+    override val title: String = "Stair Lift Simulator"
     override val bgcolor: RGBA = RGBA.float(.25f, .25f, .25f, 1f)
 
     override suspend fun AsyncInjector.configure() {

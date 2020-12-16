@@ -2,8 +2,10 @@ import com.soywiz.klock.TimeSpan
 import com.soywiz.korge.scene.Scene
 import com.soywiz.korge.view.Container
 import com.soywiz.korge.view.addUpdater
+import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
 import com.soywiz.korge3d.View3D
+import com.soywiz.korge3d.findByType
 import com.soywiz.korge3d.format.readColladaLibrary
 import com.soywiz.korge3d.get
 import com.soywiz.korge3d.instantiate
@@ -17,6 +19,10 @@ class RootScene : Scene() {
             val library = resourcesVfs["StairLift.dae"].readColladaLibrary()
             val mainSceneView = library.mainScene.instantiate()
             this += mainSceneView
+
+            val cameraFromModel = mainSceneView.findByType<Camera3D>().firstOrNull()
+                    ?: throw RuntimeException("Camera not found in the model")
+            camera = cameraFromModel.clone()
 
             val movingParts = MovingParts(
                     wholeStairLift = mainSceneView["Scene"] ?: throw RuntimeException("Model part not found!"),
