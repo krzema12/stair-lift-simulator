@@ -11,6 +11,13 @@ class ControllerLogic {
             generalState = GeneralState.GoingUp,
     )
 
+    companion object {
+        const val EXTREME_MAIN_MOTOR_POSITION = 2000;
+        const val MAIN_MOTOR_POSITION_SLOWDOWN_MARGIN = 200;
+        const val MAIN_MOTOR_SPEED_FAST = 0.5f
+        const val MAIN_MOTOR_SPEED_SLOW = 0.1f
+    }
+
     private enum class GeneralState {
         GoingUp,
         GoingUpApproachingTop,
@@ -27,52 +34,43 @@ class ControllerLogic {
 
         when (state.generalState) {
             GeneralState.GoingUp -> {
-                return if (sensorInputs.mainMotorEncoder < 1800) {
+                return if (sensorInputs.mainMotorEncoder < EXTREME_MAIN_MOTOR_POSITION - MAIN_MOTOR_POSITION_SLOWDOWN_MARGIN) {
                     ActuatorOutputs(
-                            mainMotorSpeed = 0.5f,
+                            mainMotorSpeed = MAIN_MOTOR_SPEED_FAST,
                     )
                 } else {
                     state = state.copy(generalState = GeneralState.GoingUpApproachingTop)
-                    ActuatorOutputs(
-                            // TODO this actuator output is duplicated!
-                            mainMotorSpeed = 0.1f,
-                    )
+                    run(sensorInputs)
                 }
             }
             GeneralState.GoingUpApproachingTop -> {
-                return if (sensorInputs.mainMotorEncoder < 2000) {
+                return if (sensorInputs.mainMotorEncoder < EXTREME_MAIN_MOTOR_POSITION) {
                     ActuatorOutputs(
-                            mainMotorSpeed = 0.1f,
+                            mainMotorSpeed = MAIN_MOTOR_SPEED_SLOW,
                     )
                 } else {
                     state = state.copy(generalState = GeneralState.GoingDown)
-                    ActuatorOutputs(
-                            mainMotorSpeed = -0.5f,
-                    )
+                    run(sensorInputs)
                 }
             }
             GeneralState.GoingDown -> {
-                return if (sensorInputs.mainMotorEncoder > -1800) {
+                return if (sensorInputs.mainMotorEncoder > -(EXTREME_MAIN_MOTOR_POSITION - MAIN_MOTOR_POSITION_SLOWDOWN_MARGIN)) {
                     ActuatorOutputs(
-                            mainMotorSpeed = -0.5f,
+                            mainMotorSpeed = -MAIN_MOTOR_SPEED_FAST,
                     )
                 } else {
                     state = state.copy(generalState = GeneralState.GoingDownApproachingBottom)
-                    ActuatorOutputs(
-                            mainMotorSpeed = -0.1f,
-                    )
+                    run(sensorInputs)
                 }
             }
             GeneralState.GoingDownApproachingBottom -> {
-                return if (sensorInputs.mainMotorEncoder > -2000) {
+                return if (sensorInputs.mainMotorEncoder > -EXTREME_MAIN_MOTOR_POSITION) {
                     ActuatorOutputs(
-                            mainMotorSpeed = -0.1f,
+                            mainMotorSpeed = -MAIN_MOTOR_SPEED_SLOW,
                     )
                 } else {
                     state = state.copy(generalState = GeneralState.GoingUp)
-                    ActuatorOutputs(
-                            mainMotorSpeed = 0.5f,
-                    )
+                    run(sensorInputs)
                 }
             }
         }
