@@ -14,7 +14,7 @@ class ControllerLogic {
     companion object {
         const val EXTREME_MAIN_MOTOR_POSITION = 2000;
         const val MAIN_MOTOR_POSITION_SLOWDOWN_MARGIN = 200;
-        const val MAIN_MOTOR_SPEED_FAST = 0.5f
+        const val MAIN_MOTOR_SPEED_FAST = 0.75f
         const val MAIN_MOTOR_SPEED_SLOW = 0.1f
     }
 
