@@ -53,4 +53,5 @@ private fun MovingParts.prepareSensorInputs(): SensorInputs {
 @Korge3DExperimental
 private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs, timeSpan: TimeSpan) {
     wholeStairLift.x += actuatorOutputs.mainMotorSpeed * timeSpan.seconds
+    wholeStairLift.y += 0.3 * actuatorOutputs.mainMotorSpeed * timeSpan.seconds
 }
