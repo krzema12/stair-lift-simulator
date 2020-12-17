@@ -7,10 +7,8 @@ import com.soywiz.korge.view.addUpdater
 import com.soywiz.korge.view.position
 import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
-import com.soywiz.korge3d.View3D
 import com.soywiz.korge3d.findByType
 import com.soywiz.korge3d.format.readColladaLibrary
-import com.soywiz.korge3d.get
 import com.soywiz.korge3d.instantiate
 import com.soywiz.korge3d.scene3D
 import com.soywiz.korio.file.std.resourcesVfs
@@ -24,6 +22,9 @@ class RootScene : Scene() {
             val mainSceneView = library.mainScene.instantiate()
             this += mainSceneView
 
+            val wholeStairLiftAnimation = library.animationDefs["LiftEmpty_LiftEmptyAction_transform"]
+                    ?: throw RuntimeException("Whole stair lift animation not found!")
+            val wholeStairLiftAnimator = RandomAccessAnimator(wholeStairLiftAnimation, mainSceneView)
             val sideFlapAnimation = library.animationDefs["Side_flap_Side_flapAction_transform"]
                     ?: throw RuntimeException("Side flap animation not found!")
             val sideFlapAnimator = RandomAccessAnimator(sideFlapAnimation, mainSceneView)
@@ -33,7 +34,7 @@ class RootScene : Scene() {
             camera = cameraFromModel.clone()
 
             val movingParts = MovingParts(
-                    wholeStairLift = mainSceneView["Scene"] ?: throw RuntimeException("Model part not found!"),
+                    wholeStairLiftAnimator = wholeStairLiftAnimator,
                     sideFlapAnimator = sideFlapAnimator,
             )
             val controllerLogic = ControllerLogic()
@@ -62,21 +63,19 @@ class RootScene : Scene() {
 
 @Korge3DExperimental
 data class MovingParts(
-        val wholeStairLift: View3D,
+        val wholeStairLiftAnimator: RandomAccessAnimator,
         val sideFlapAnimator: RandomAccessAnimator,
 )
 
 @Korge3DExperimental
 private fun MovingParts.prepareSensorInputs(): SensorInputs {
     return SensorInputs(
-            mainMotorEncoder = (wholeStairLift.x * 1000.0).toInt(),
+            mainMotorPositionNormalized = wholeStairLiftAnimator.progress,
     )
 }
 
 @Korge3DExperimental
 private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs, timeSpan: TimeSpan) {
-    wholeStairLift.x += actuatorOutputs.mainMotorSpeed * timeSpan.seconds
-    wholeStairLift.y += 0.3 * actuatorOutputs.mainMotorSpeed * timeSpan.seconds
-
-    sideFlapAnimator.progress = ((wholeStairLift.x + 2.0)/4.0).toFloat()
+    wholeStairLiftAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
+    sideFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
 }

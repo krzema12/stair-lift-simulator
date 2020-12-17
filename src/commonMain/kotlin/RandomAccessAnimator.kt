@@ -10,9 +10,12 @@ import com.soywiz.korma.interpolation.interpolate
 
 @Korge3DExperimental
 class RandomAccessAnimator(val animation: Animation3D, val rootView: View3D) {
-    var progress: Float = 0.0f
+    private var _progress = 0.0f
+
+    var progress: Float
+        get() = _progress
         set(value) {
-            println(value)
+            _progress = value
 
             val keyFrames = animation.keyFrames
             val fseconds = keyFrames.seconds
