@@ -1,4 +1,4 @@
-import com.soywiz.kds.values
+import com.soywiz.kds.get
 import com.soywiz.klock.TimeSpan
 import com.soywiz.korge.scene.Scene
 import com.soywiz.korge.view.Container
@@ -8,7 +8,6 @@ import com.soywiz.korge.view.position
 import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
 import com.soywiz.korge3d.View3D
-import com.soywiz.korge3d.animation.Animator3D
 import com.soywiz.korge3d.findByType
 import com.soywiz.korge3d.format.readColladaLibrary
 import com.soywiz.korge3d.get
@@ -25,9 +24,9 @@ class RootScene : Scene() {
             val mainSceneView = library.mainScene.instantiate()
             this += mainSceneView
 
-            println(library.animationDefs.values)
-            val animator = Animator3D(library.animationDefs.values, mainSceneView)
-            addUpdater { animator.update(it) }
+            val sideFlapAnimation = library.animationDefs["Side_flap_Side_flapAction_transform"]
+                    ?: throw RuntimeException("Side flap animation not found!")
+            val sideFlapAnimator = RandomAccessAnimator(sideFlapAnimation, mainSceneView)
 
             val cameraFromModel = mainSceneView.findByType<Camera3D>().firstOrNull()
                     ?: throw RuntimeException("Camera not found in the model")
@@ -35,6 +34,7 @@ class RootScene : Scene() {
 
             val movingParts = MovingParts(
                     wholeStairLift = mainSceneView["Scene"] ?: throw RuntimeException("Model part not found!"),
+                    sideFlapAnimator = sideFlapAnimator,
             )
             val controllerLogic = ControllerLogic()
 
@@ -63,6 +63,7 @@ class RootScene : Scene() {
 @Korge3DExperimental
 data class MovingParts(
         val wholeStairLift: View3D,
+        val sideFlapAnimator: RandomAccessAnimator,
 )
 
 @Korge3DExperimental
@@ -76,4 +77,6 @@ private fun MovingParts.prepareSensorInputs(): SensorInputs {
 private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs, timeSpan: TimeSpan) {
     wholeStairLift.x += actuatorOutputs.mainMotorSpeed * timeSpan.seconds
     wholeStairLift.y += 0.3 * actuatorOutputs.mainMotorSpeed * timeSpan.seconds
+
+    sideFlapAnimator.setProgress(((wholeStairLift.x + 2.0)/4.0).toFloat())
 }
