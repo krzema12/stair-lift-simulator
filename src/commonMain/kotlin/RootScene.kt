@@ -1,3 +1,4 @@
+import com.soywiz.kds.values
 import com.soywiz.klock.TimeSpan
 import com.soywiz.korge.scene.Scene
 import com.soywiz.korge.view.Container
@@ -7,6 +8,7 @@ import com.soywiz.korge.view.position
 import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
 import com.soywiz.korge3d.View3D
+import com.soywiz.korge3d.animation.Animator3D
 import com.soywiz.korge3d.findByType
 import com.soywiz.korge3d.format.readColladaLibrary
 import com.soywiz.korge3d.get
@@ -22,6 +24,10 @@ class RootScene : Scene() {
             val library = resourcesVfs["StairLift.dae"].readColladaLibrary()
             val mainSceneView = library.mainScene.instantiate()
             this += mainSceneView
+
+            println(library.animationDefs.values)
+            val animator = Animator3D(library.animationDefs.values, mainSceneView)
+            addUpdater { animator.update(it) }
 
             val cameraFromModel = mainSceneView.findByType<Camera3D>().firstOrNull()
                     ?: throw RuntimeException("Camera not found in the model")
