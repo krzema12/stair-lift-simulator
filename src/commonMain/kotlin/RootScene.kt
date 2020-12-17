@@ -78,5 +78,5 @@ private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs,
     wholeStairLift.x += actuatorOutputs.mainMotorSpeed * timeSpan.seconds
     wholeStairLift.y += 0.3 * actuatorOutputs.mainMotorSpeed * timeSpan.seconds
 
-    sideFlapAnimator.setProgress(((wholeStairLift.x + 2.0)/4.0).toFloat())
+    sideFlapAnimator.progress = ((wholeStairLift.x + 2.0)/4.0).toFloat()
 }
