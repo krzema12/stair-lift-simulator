@@ -7,6 +7,8 @@ import com.soywiz.korge.view.addUpdater
 import com.soywiz.korge.view.position
 import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
+import com.soywiz.korge3d.Library3D
+import com.soywiz.korge3d.animation.Animation3D
 import com.soywiz.korge3d.findByType
 import com.soywiz.korge3d.format.readColladaLibrary
 import com.soywiz.korge3d.instantiate
@@ -22,20 +24,21 @@ class RootScene : Scene() {
             val mainSceneView = library.mainScene.instantiate()
             this += mainSceneView
 
-            val wholeStairLiftAnimation = library.animationDefs["LiftEmpty_LiftEmptyAction_transform"]
-                    ?: throw RuntimeException("Whole stair lift animation not found!")
-            val wholeStairLiftAnimator = RandomAccessAnimator(wholeStairLiftAnimation, mainSceneView)
-            val sideFlapAnimation = library.animationDefs["Side_flap_Side_flapAction_transform"]
-                    ?: throw RuntimeException("Side flap animation not found!")
-            val sideFlapAnimator = RandomAccessAnimator(sideFlapAnimation, mainSceneView)
+            val drivingUpAndDownAnimation = library.getAnimation("Driving_up_and_down_Driving_up_and_downAction_transform")
+            val drivingUpAndDownAnimator = RandomAccessAnimator(drivingUpAndDownAnimation, mainSceneView)
+            val lowerFlapAnimation = library.getAnimation("Lower_flap_Lower_flapAction_transform")
+            val lowerFlapAnimator = RandomAccessAnimator(lowerFlapAnimation, mainSceneView)
+            val higherFlapAnimation = library.getAnimation("Higher_flap_Higher_flapAction_transform")
+            val higherFlapAnimator = RandomAccessAnimator(higherFlapAnimation, mainSceneView)
 
             val cameraFromModel = mainSceneView.findByType<Camera3D>().firstOrNull()
                     ?: throw RuntimeException("Camera not found in the model")
             camera = cameraFromModel.clone()
 
             val movingParts = MovingParts(
-                    wholeStairLiftAnimator = wholeStairLiftAnimator,
-                    sideFlapAnimator = sideFlapAnimator,
+                    drivingUpAndDownAnimator = drivingUpAndDownAnimator,
+                    lowerFlapAnimator = lowerFlapAnimator,
+                    higherFlapAnimator = higherFlapAnimator,
             )
             val controllerLogic = ControllerLogic()
 
@@ -62,20 +65,27 @@ class RootScene : Scene() {
 }
 
 @Korge3DExperimental
+private fun Library3D.getAnimation(name: String): Animation3D {
+    return animationDefs[name] ?: throw IllegalArgumentException("Could not find animation with name '$name'")
+}
+
+@Korge3DExperimental
 data class MovingParts(
-        val wholeStairLiftAnimator: RandomAccessAnimator,
-        val sideFlapAnimator: RandomAccessAnimator,
+        val drivingUpAndDownAnimator: RandomAccessAnimator,
+        val lowerFlapAnimator: RandomAccessAnimator,
+        val higherFlapAnimator: RandomAccessAnimator,
 )
 
 @Korge3DExperimental
 private fun MovingParts.prepareSensorInputs(): SensorInputs {
     return SensorInputs(
-            mainMotorPositionNormalized = wholeStairLiftAnimator.progress,
+            mainMotorPositionNormalized = drivingUpAndDownAnimator.progress,
     )
 }
 
 @Korge3DExperimental
 private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs, timeSpan: TimeSpan) {
-    wholeStairLiftAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
-    sideFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
+    drivingUpAndDownAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
+    lowerFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
+    higherFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
 }
