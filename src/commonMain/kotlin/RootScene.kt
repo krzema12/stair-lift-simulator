@@ -1,7 +1,9 @@
 import com.soywiz.klock.TimeSpan
 import com.soywiz.korge.scene.Scene
 import com.soywiz.korge.view.Container
+import com.soywiz.korge.view.Text
 import com.soywiz.korge.view.addUpdater
+import com.soywiz.korge.view.position
 import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
 import com.soywiz.korge3d.View3D
@@ -15,6 +17,7 @@ import com.soywiz.korio.file.std.resourcesVfs
 @Korge3DExperimental
 class RootScene : Scene() {
     override suspend fun Container.sceneInit() {
+
         scene3D {
             val library = resourcesVfs["StairLift.dae"].readColladaLibrary()
             val mainSceneView = library.mainScene.instantiate()
@@ -29,9 +32,22 @@ class RootScene : Scene() {
             )
             val controllerLogic = ControllerLogic()
 
+            val sensorInputsText = Text(text = "").position(2, 2)
+            this@sceneInit += sensorInputsText
+            val actuatorOutputsText = Text(text = "").position(2, 52)
+            this@sceneInit += actuatorOutputsText
+            val controllerStateText = Text(text = "").position(2, 102)
+            this@sceneInit += controllerStateText
+
             addUpdater { timeSpan ->
                 val sensorInputs = movingParts.prepareSensorInputs()
+                sensorInputsText.text = sensorInputs.toString().replace("(", "(\n")
+
                 val actuatorOutputs = controllerLogic.run(sensorInputs)
+                actuatorOutputsText.text = actuatorOutputs.toString().replace("(", "(\n")
+
+                controllerStateText.text = controllerLogic.state.toString().replace("(", "(\n")
+
                 movingParts.executeActuatorOutputs(actuatorOutputs, timeSpan)
             }
         }

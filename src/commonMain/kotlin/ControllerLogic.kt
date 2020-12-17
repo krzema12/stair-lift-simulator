@@ -7,9 +7,10 @@ data class ActuatorOutputs(
 )
 
 class ControllerLogic {
-    private var state = State(
+    var state = ControllerState(
             generalState = GeneralState.GoingUp,
     )
+    private set
 
     companion object {
         const val EXTREME_MAIN_MOTOR_POSITION = 2000;
@@ -18,20 +19,18 @@ class ControllerLogic {
         const val MAIN_MOTOR_SPEED_SLOW = 0.1f
     }
 
-    private enum class GeneralState {
+    enum class GeneralState {
         GoingUp,
         GoingUpApproachingTop,
         GoingDown,
         GoingDownApproachingBottom,
     }
 
-    private data class State(
+    data class ControllerState(
             val generalState: GeneralState,
     )
 
     fun run(sensorInputs: SensorInputs): ActuatorOutputs {
-        println(sensorInputs)
-
         when (state.generalState) {
             GeneralState.GoingUp -> {
                 return if (sensorInputs.mainMotorEncoder < EXTREME_MAIN_MOTOR_POSITION - MAIN_MOTOR_POSITION_SLOWDOWN_MARGIN) {
