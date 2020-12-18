@@ -54,6 +54,8 @@ class RootScene : Scene() {
 
             var isKeyEnabled = false
             var isWheelchairPresent = false
+            var goingUpButtonPressed = false
+            var goingDownButtonPressed = false
 
             keys {
                 down(Key.K) { isKeyEnabled = true }
@@ -61,10 +63,19 @@ class RootScene : Scene() {
 
                 down(Key.W) { isWheelchairPresent = true }
                 down(Key.Q) { isWheelchairPresent = false }
+
+                down(Key.PAGE_UP) { goingUpButtonPressed = true }
+                up(Key.PAGE_UP) { goingUpButtonPressed = false }
+                down(Key.PAGE_DOWN) { goingDownButtonPressed = true }
+                up(Key.PAGE_DOWN) { goingDownButtonPressed = false }
             }
 
             addUpdater { timeSpan ->
-                val sensorInputs = movingParts.prepareSensorInputs(isKeyEnabled, isWheelchairPresent)
+                val sensorInputs = movingParts.prepareSensorInputs(
+                        isKeyEnabled,
+                        isWheelchairPresent,
+                        goingUpButtonPressed,
+                        goingDownButtonPressed)
                 sensorInputsText.text = sensorInputs.toString().replace("(", "(\n").replace(",", ",\n")
 
                 val actuatorOutputs = controllerLogic.run(sensorInputs)
@@ -94,9 +105,14 @@ data class MovingParts(
 )
 
 @Korge3DExperimental
-private fun MovingParts.prepareSensorInputs(isKeyEnabled: Boolean, isWheelchairPresent: Boolean): SensorInputs {
+private fun MovingParts.prepareSensorInputs(isKeyEnabled: Boolean,
+                                            isWheelchairPresent: Boolean,
+                                            wantsToGoUp: Boolean,
+                                            wantsToGoDown: Boolean): SensorInputs {
     return SensorInputs(
             isKeyEnabled = isKeyEnabled,
+            goingUpButtonPressed = wantsToGoUp,
+            goingDownButtonPressed = wantsToGoDown,
             foldablePlatformPositionNormalized = foldablePlatformAnimator.progress,
             lowerFlapPositionNormalized = lowerFlapAnimator.progress,
             higherFlapPositionNormalized = higherFlapAnimator.progress,

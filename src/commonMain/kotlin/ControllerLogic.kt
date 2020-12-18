@@ -1,5 +1,7 @@
 data class SensorInputs(
         val isKeyEnabled: Boolean,
+        val goingUpButtonPressed: Boolean,
+        val goingDownButtonPressed: Boolean,
         val foldablePlatformPositionNormalized: Float,
         val lowerFlapPositionNormalized: Float,
         val higherFlapPositionNormalized: Float,
@@ -116,7 +118,7 @@ class ControllerLogic {
                             foldablePlatformUnfoldingSpeed = 0.0f,
                             lowerFlapUnfoldingSpeed = 0.0f,
                             barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = 0.2f,
+                            mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f,
                             higherFlapUnfoldingSpeed = 0.0f,
                     )
                 } else {
