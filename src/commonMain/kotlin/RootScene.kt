@@ -1,5 +1,7 @@
 import com.soywiz.kds.get
 import com.soywiz.klock.TimeSpan
+import com.soywiz.korev.Key
+import com.soywiz.korge.input.keys
 import com.soywiz.korge.scene.Scene
 import com.soywiz.korge.view.Container
 import com.soywiz.korge.view.Text
@@ -50,8 +52,19 @@ class RootScene : Scene() {
             val controllerStateText = Text(text = "").position(2, 102)
             this@sceneInit += controllerStateText
 
+            var isKeyEnabled = false
+
+            keys {
+                down(Key.K) {
+                    isKeyEnabled = true
+                }
+                up(Key.K) {
+                     isKeyEnabled = false
+                }
+            }
+
             addUpdater { timeSpan ->
-                val sensorInputs = movingParts.prepareSensorInputs()
+                val sensorInputs = movingParts.prepareSensorInputs(isKeyEnabled)
                 sensorInputsText.text = sensorInputs.toString().replace("(", "(\n")
 
                 val actuatorOutputs = controllerLogic.run(sensorInputs)
@@ -81,8 +94,11 @@ data class MovingParts(
 )
 
 @Korge3DExperimental
-private fun MovingParts.prepareSensorInputs(): SensorInputs {
+private fun MovingParts.prepareSensorInputs(isKeyEnabled: Boolean): SensorInputs {
     return SensorInputs(
+            isKeyEnabled = isKeyEnabled,
+            foldablePlatformPositionNormalized = foldablePlatformAnimator.progress,
+            lowerFlapPositionNormalized = lowerFlapAnimator.progress,
             mainMotorPositionNormalized = drivingUpAndDownAnimator.progress,
     )
 }
@@ -90,8 +106,8 @@ private fun MovingParts.prepareSensorInputs(): SensorInputs {
 @Korge3DExperimental
 private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs, timeSpan: TimeSpan) {
     drivingUpAndDownAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
-    foldablePlatformAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
-    lowerFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
+    foldablePlatformAnimator.progress += actuatorOutputs.foldablePlatformUnfoldingSpeed * timeSpan.seconds.toFloat()
+    lowerFlapAnimator.progress += actuatorOutputs.lowerFlapUnfoldingSpeed * timeSpan.seconds.toFloat()
     higherFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
     barriersAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
 }
