@@ -47,30 +47,30 @@ class RootScene : Scene() {
 
             val sensorInputsText = Text(text = "").position(2, 2)
             this@sceneInit += sensorInputsText
-            val actuatorOutputsText = Text(text = "").position(2, 52)
+            val actuatorOutputsText = Text(text = "").position(2, 202)
             this@sceneInit += actuatorOutputsText
-            val controllerStateText = Text(text = "").position(2, 102)
+            val controllerStateText = Text(text = "").position(2, 402)
             this@sceneInit += controllerStateText
 
             var isKeyEnabled = false
+            var isWheelchairPresent = false
 
             keys {
-                down(Key.K) {
-                    isKeyEnabled = true
-                }
-                up(Key.K) {
-                     isKeyEnabled = false
-                }
+                down(Key.K) { isKeyEnabled = true }
+                up(Key.K) { isKeyEnabled = false }
+
+                down(Key.W) { isWheelchairPresent = true }
+                down(Key.Q) { isWheelchairPresent = false }
             }
 
             addUpdater { timeSpan ->
-                val sensorInputs = movingParts.prepareSensorInputs(isKeyEnabled)
-                sensorInputsText.text = sensorInputs.toString().replace("(", "(\n")
+                val sensorInputs = movingParts.prepareSensorInputs(isKeyEnabled, isWheelchairPresent)
+                sensorInputsText.text = sensorInputs.toString().replace("(", "(\n").replace(",", ",\n")
 
                 val actuatorOutputs = controllerLogic.run(sensorInputs)
-                actuatorOutputsText.text = actuatorOutputs.toString().replace("(", "(\n")
+                actuatorOutputsText.text = actuatorOutputs.toString().replace("(", "(\n").replace(",", ",\n")
 
-                controllerStateText.text = controllerLogic.state.toString().replace("(", "(\n")
+                controllerStateText.text = controllerLogic.state.toString().replace("(", "(\n").replace(",", ",\n")
 
                 movingParts.executeActuatorOutputs(actuatorOutputs, timeSpan)
             }
@@ -94,11 +94,14 @@ data class MovingParts(
 )
 
 @Korge3DExperimental
-private fun MovingParts.prepareSensorInputs(isKeyEnabled: Boolean): SensorInputs {
+private fun MovingParts.prepareSensorInputs(isKeyEnabled: Boolean, isWheelchairPresent: Boolean): SensorInputs {
     return SensorInputs(
             isKeyEnabled = isKeyEnabled,
             foldablePlatformPositionNormalized = foldablePlatformAnimator.progress,
             lowerFlapPositionNormalized = lowerFlapAnimator.progress,
+            higherFlapPositionNormalized = higherFlapAnimator.progress,
+            isWheelchairPresent = isWheelchairPresent,
+            barriersPositionNormalized = barriersAnimator.progress,
             mainMotorPositionNormalized = drivingUpAndDownAnimator.progress,
     )
 }
@@ -108,6 +111,6 @@ private fun MovingParts.executeActuatorOutputs(actuatorOutputs: ActuatorOutputs,
     drivingUpAndDownAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
     foldablePlatformAnimator.progress += actuatorOutputs.foldablePlatformUnfoldingSpeed * timeSpan.seconds.toFloat()
     lowerFlapAnimator.progress += actuatorOutputs.lowerFlapUnfoldingSpeed * timeSpan.seconds.toFloat()
-    higherFlapAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
-    barriersAnimator.progress += actuatorOutputs.mainMotorSpeed * timeSpan.seconds.toFloat()
+    higherFlapAnimator.progress += actuatorOutputs.higherFlapUnfoldingSpeed * timeSpan.seconds.toFloat()
+    barriersAnimator.progress += actuatorOutputs.barriersUnfoldingSpeed * timeSpan.seconds.toFloat()
 }
