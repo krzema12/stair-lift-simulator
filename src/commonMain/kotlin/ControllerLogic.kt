@@ -35,82 +35,80 @@ class ControllerLogic {
     }
 
     fun run(sensorInputs: SensorInputs): ActuatorOutputs {
-        when (state) {
-            State.Parked -> {
-                return if (sensorInputs.isKeyEnabled) {
-                    state = State.PlatformUnfolding
-                    run(sensorInputs)
-                } else {
-                    ActuatorOutputs()
-                }
+        state = getNewState(sensorInputs)
+        return getActuatorOutputs(sensorInputs)
+    }
+
+    /**
+     * Focuses on transitions between states.
+     */
+    private fun getNewState(sensorInputs: SensorInputs): State {
+        return when (state) {
+            State.Parked -> if (!sensorInputs.isKeyEnabled) {
+                state
+            } else {
+                State.PlatformUnfolding
             }
-            State.PlatformUnfolding -> {
-                return if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
-                    ActuatorOutputs(foldablePlatformUnfoldingSpeed = 0.2f)
-                } else {
-                    state = State.UnfoldingBothFlaps
-                    run(sensorInputs)
-                }
+            State.PlatformUnfolding -> if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
+                state
+            } else {
+                State.UnfoldingBothFlaps
             }
-            State.UnfoldingBothFlaps -> {
-                return if (sensorInputs.lowerFlapPositionNormalized < 1.0f || sensorInputs.higherFlapPositionNormalized < 1.0f) {
-                    ActuatorOutputs(
-                            lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
-                            higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
-                    )
-                } else {
-                    state = State.WaitingForWheelchair
-                    run(sensorInputs)
-                }
+            State.UnfoldingBothFlaps -> if (sensorInputs.lowerFlapPositionNormalized < 1.0f || sensorInputs.higherFlapPositionNormalized < 1.0f) {
+                state
+            } else {
+                State.WaitingForWheelchair
             }
-            State.WaitingForWheelchair -> {
-                return if (!sensorInputs.isWheelchairPresent) {
-                    ActuatorOutputs()
-                } else {
-                    state = State.UnfoldingBarriers
-                    run(sensorInputs)
-                }
+            State.WaitingForWheelchair -> if (!sensorInputs.isWheelchairPresent) {
+                state
+            } else {
+                State.UnfoldingBarriers
             }
-            State.UnfoldingBarriers -> {
-                return if (sensorInputs.barriersPositionNormalized < 1.0f) {
-                    ActuatorOutputs(barriersUnfoldingSpeed = 0.2f)
-                } else {
-                    state = State.GoingUp
-                    run(sensorInputs)
-                }
+            State.UnfoldingBarriers -> if (sensorInputs.barriersPositionNormalized < 1.0f) {
+                state
+            } else {
+                State.GoingUp
             }
-            State.GoingUp -> {
-                return if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
-                    ActuatorOutputs(mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f)
-                } else {
-                    state = State.FoldingBarriers
-                    run(sensorInputs)
-                }
+            State.GoingUp -> if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
+                state
+            } else {
+                State.FoldingBarriers
             }
-            State.FoldingBarriers -> {
-                return if (sensorInputs.barriersPositionNormalized > 0.0f) {
-                    ActuatorOutputs(barriersUnfoldingSpeed = -0.2f)
-                } else {
-                    state = State.WaitingForWheelchairLeaving
-                    run(sensorInputs)
-                }
+            State.FoldingBarriers -> if (sensorInputs.barriersPositionNormalized > 0.0f) {
+                state
+            } else {
+                State.WaitingForWheelchairLeaving
             }
-            State.WaitingForWheelchairLeaving -> {
-                return if (sensorInputs.isWheelchairPresent) {
-                    ActuatorOutputs()
-                } else {
-                    state = State.GoingDown
-                    run(sensorInputs)
-                }
+            State.WaitingForWheelchairLeaving -> if (sensorInputs.isWheelchairPresent) {
+                state
+            } else {
+                State.GoingDown
             }
-            State.GoingDown -> {
-                return if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
-                    ActuatorOutputs(mainMotorSpeed = -0.2f)
-                } else {
-                    state = State.GoingUp
-                    run(sensorInputs)
-                }
+            State.GoingDown -> if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
+                state
+            } else {
+                State.GoingUp
             }
+        }
+    }
+
+    /**
+     * Focuses on what happens in a given state.
+     */
+    private fun getActuatorOutputs(sensorInputs: SensorInputs): ActuatorOutputs {
+        return when (state) {
+            State.Parked -> ActuatorOutputs()
+            State.PlatformUnfolding -> ActuatorOutputs(foldablePlatformUnfoldingSpeed = 0.2f)
+            State.UnfoldingBothFlaps -> ActuatorOutputs(
+                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
+                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
+            )
+            State.WaitingForWheelchair -> ActuatorOutputs()
+            State.UnfoldingBarriers -> ActuatorOutputs(barriersUnfoldingSpeed = 0.2f)
+            State.GoingUp -> ActuatorOutputs(mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f)
+            State.FoldingBarriers -> ActuatorOutputs(barriersUnfoldingSpeed = -0.2f)
+            State.WaitingForWheelchairLeaving -> ActuatorOutputs()
+            State.GoingDown -> ActuatorOutputs(mainMotorSpeed = -0.2f)
         }
     }
 }
