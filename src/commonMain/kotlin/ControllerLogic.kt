@@ -54,7 +54,8 @@ class ControllerLogic {
             } else {
                 State.UnfoldingBothFlaps
             }
-            State.UnfoldingBothFlaps -> if (sensorInputs.lowerFlapPositionNormalized < 1.0f || sensorInputs.higherFlapPositionNormalized < 1.0f) {
+            State.UnfoldingBothFlaps -> if (sensorInputs.lowerFlapPositionNormalized < 1.0f ||
+                    sensorInputs.higherFlapPositionNormalized < 1.0f) {
                 state
             } else {
                 State.WaitingForWheelchair
