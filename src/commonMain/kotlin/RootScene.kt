@@ -49,7 +49,7 @@ class RootScene : Scene() {
             this@sceneInit += sensorInputsText
             val actuatorOutputsText = Text(text = "").position(2, 202)
             this@sceneInit += actuatorOutputsText
-            val controllerStateText = Text(text = "").position(2, 402)
+            val controllerStateText = Text(text = "").position(2, 700)
             this@sceneInit += controllerStateText
 
             var isKeyEnabled = false

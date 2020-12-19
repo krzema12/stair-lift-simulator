@@ -19,19 +19,19 @@ data class ActuatorOutputs(
 )
 
 class ControllerLogic {
-    var state = State.Parked
+    var state: State = State.Parked
     private set
 
-    enum class State {
-        Parked,
-        PlatformUnfolding,
-        UnfoldingBothFlaps,
-        WaitingForWheelchair,
-        PreparingForDrivingWithWheelchair,
-        Driving,
-        PreparingForWheelchairLeaving,
-        WaitingForWheelchairLeaving,
-        GoingDown,
+    sealed class State {
+        object Parked : State()
+        object PlatformUnfolding : State()
+        object UnfoldingBothFlaps : State()
+        object WaitingForWheelchair : State()
+        object PreparingForDrivingWithWheelchair : State()
+        object Driving : State()
+        object PreparingForWheelchairLeaving : State()
+        object WaitingForWheelchairLeaving : State()
+        object GoingDown : State()
     }
 
     fun run(sensorInputs: SensorInputs): ActuatorOutputs {
@@ -123,4 +123,3 @@ class ControllerLogic {
         }
     }
 }
-
