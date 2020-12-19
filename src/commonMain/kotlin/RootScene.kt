@@ -81,7 +81,7 @@ class RootScene : Scene() {
                 val actuatorOutputs = controllerLogic.run(sensorInputs)
                 actuatorOutputsText.text = actuatorOutputs.toString().replace("(", "(\n").replace(",", ",\n")
 
-                controllerStateText.text = controllerLogic.state.toString().replace("(", "(\n").replace(",", ",\n")
+                controllerStateText.text = "State: ${controllerLogic.state.toString().replace("(", "(\n").replace(",", ",\n")}"
 
                 movingParts.executeActuatorOutputs(actuatorOutputs, timeSpan)
             }
