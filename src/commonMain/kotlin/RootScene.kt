@@ -64,10 +64,10 @@ class RootScene : Scene() {
                 down(Key.W) { isWheelchairPresent = true }
                 down(Key.Q) { isWheelchairPresent = false }
 
-                down(Key.PAGE_UP) { goingUpButtonPressed = true }
-                up(Key.PAGE_UP) { goingUpButtonPressed = false }
-                down(Key.PAGE_DOWN) { goingDownButtonPressed = true }
-                up(Key.PAGE_DOWN) { goingDownButtonPressed = false }
+                down(Key.UP) { goingUpButtonPressed = true }
+                up(Key.UP) { goingUpButtonPressed = false }
+                down(Key.DOWN) { goingDownButtonPressed = true }
+                up(Key.DOWN) { goingDownButtonPressed = false }
             }
 
             addUpdater { timeSpan ->
