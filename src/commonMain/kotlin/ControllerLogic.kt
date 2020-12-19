@@ -27,9 +27,9 @@ class ControllerLogic {
         PlatformUnfolding,
         UnfoldingBothFlaps,
         WaitingForWheelchair,
-        UnfoldingBarriers,
-        GoingUp,
-        FoldingBarriers,
+        PreparingForDrivingWithWheelchair,
+        Driving,
+        PreparingForWheelchairLeaving,
         WaitingForWheelchairLeaving,
         GoingDown,
     }
@@ -62,19 +62,22 @@ class ControllerLogic {
             State.WaitingForWheelchair -> if (!sensorInputs.isWheelchairPresent) {
                 state
             } else {
-                State.UnfoldingBarriers
+                State.PreparingForDrivingWithWheelchair
             }
-            State.UnfoldingBarriers -> if (sensorInputs.barriersPositionNormalized < 1.0f) {
+            State.PreparingForDrivingWithWheelchair -> if (sensorInputs.barriersPositionNormalized < 1.0f ||
+                    sensorInputs.lowerFlapPositionNormalized > 0.5f ||
+                    sensorInputs.higherFlapPositionNormalized > 0.5f) {
                 state
             } else {
-                State.GoingUp
+                State.Driving
             }
-            State.GoingUp -> if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
+            State.Driving -> if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
                 state
             } else {
-                State.FoldingBarriers
+                State.PreparingForWheelchairLeaving
             }
-            State.FoldingBarriers -> if (sensorInputs.barriersPositionNormalized > 0.0f) {
+            State.PreparingForWheelchairLeaving -> if (sensorInputs.barriersPositionNormalized > 0.0f ||
+                    sensorInputs.higherFlapPositionNormalized < 1.0f) {
                 state
             } else {
                 State.WaitingForWheelchairLeaving
@@ -87,7 +90,7 @@ class ControllerLogic {
             State.GoingDown -> if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
                 state
             } else {
-                State.GoingUp
+                State.Driving
             }
         }
     }
@@ -104,9 +107,16 @@ class ControllerLogic {
                     higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
             )
             State.WaitingForWheelchair -> ActuatorOutputs()
-            State.UnfoldingBarriers -> ActuatorOutputs(barriersUnfoldingSpeed = 0.2f)
-            State.GoingUp -> ActuatorOutputs(mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f)
-            State.FoldingBarriers -> ActuatorOutputs(barriersUnfoldingSpeed = -0.2f)
+            State.PreparingForDrivingWithWheelchair -> ActuatorOutputs(
+                    barriersUnfoldingSpeed = if (sensorInputs.barriersPositionNormalized < 1.0f) 0.2f else 0.0f,
+                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized > 0.5f) -0.2f else 0.0f,
+                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized > 0.5f) -0.2f else 0.0f,
+            )
+            State.Driving -> ActuatorOutputs(mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f)
+            State.PreparingForWheelchairLeaving -> ActuatorOutputs(
+                    barriersUnfoldingSpeed = if (sensorInputs.barriersPositionNormalized > 0.0f) -0.2f else 0.0f,
+                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
+            )
             State.WaitingForWheelchairLeaving -> ActuatorOutputs()
             State.GoingDown -> ActuatorOutputs(mainMotorSpeed = -0.2f)
         }
