@@ -11,11 +11,11 @@ data class SensorInputs(
 )
 
 data class ActuatorOutputs(
-        val foldablePlatformUnfoldingSpeed: Float,
-        val lowerFlapUnfoldingSpeed: Float,
-        val barriersUnfoldingSpeed: Float,
-        val mainMotorSpeed: Float,
-        val higherFlapUnfoldingSpeed: Float,
+        val foldablePlatformUnfoldingSpeed: Float = 0.0f,
+        val lowerFlapUnfoldingSpeed: Float = 0.0f,
+        val barriersUnfoldingSpeed: Float = 0.0f,
+        val mainMotorSpeed: Float = 0.0f,
+        val higherFlapUnfoldingSpeed: Float = 0.0f,
 )
 
 class ControllerLogic {
@@ -47,24 +47,12 @@ class ControllerLogic {
                     state = state.copy(generalState = GeneralState.PlatformUnfolding)
                     run(sensorInputs)
                 } else {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs()
                 }
             }
             GeneralState.PlatformUnfolding -> {
                 return if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.2f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs(foldablePlatformUnfoldingSpeed = 0.2f)
                 } else {
                     state = state.copy(generalState = GeneralState.UnfoldingBothFlaps)
                     run(sensorInputs)
@@ -73,9 +61,6 @@ class ControllerLogic {
             GeneralState.UnfoldingBothFlaps -> {
                 return if (sensorInputs.lowerFlapPositionNormalized < 1.0f || sensorInputs.higherFlapPositionNormalized < 1.0f) {
                     ActuatorOutputs(
-                            mainMotorSpeed = 0.0f,
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
                             lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
                             higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
                     )
@@ -86,13 +71,7 @@ class ControllerLogic {
             }
             GeneralState.WaitingForWheelchair -> {
                 return if (!sensorInputs.isWheelchairPresent) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs()
                 } else {
                     state = state.copy(generalState = GeneralState.UnfoldingBarriers)
                     run(sensorInputs)
@@ -100,13 +79,7 @@ class ControllerLogic {
             }
             GeneralState.UnfoldingBarriers -> {
                 return if (sensorInputs.barriersPositionNormalized < 1.0f) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.2f,
-                            mainMotorSpeed = 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs(barriersUnfoldingSpeed = 0.2f)
                 } else {
                     state = state.copy(generalState = GeneralState.GoingUp)
                     run(sensorInputs)
@@ -114,13 +87,7 @@ class ControllerLogic {
             }
             GeneralState.GoingUp -> {
                 return if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs(mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f)
                 } else {
                     state = state.copy(generalState = GeneralState.FoldingBarriers)
                     run(sensorInputs)
@@ -128,13 +95,7 @@ class ControllerLogic {
             }
             GeneralState.FoldingBarriers -> {
                 return if (sensorInputs.barriersPositionNormalized > 0.0f) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = -0.2f,
-                            mainMotorSpeed = 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs(barriersUnfoldingSpeed = -0.2f)
                 } else {
                     state = state.copy(generalState = GeneralState.WaitingForWheelchairLeaving)
                     run(sensorInputs)
@@ -142,13 +103,7 @@ class ControllerLogic {
             }
             GeneralState.WaitingForWheelchairLeaving -> {
                 return if (sensorInputs.isWheelchairPresent) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = 0.0f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs()
                 } else {
                     state = state.copy(generalState = GeneralState.GoingDown)
                     run(sensorInputs)
@@ -156,13 +111,7 @@ class ControllerLogic {
             }
             GeneralState.GoingDown -> {
                 return if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
-                    ActuatorOutputs(
-                            foldablePlatformUnfoldingSpeed = 0.0f,
-                            lowerFlapUnfoldingSpeed = 0.0f,
-                            barriersUnfoldingSpeed = 0.0f,
-                            mainMotorSpeed = -0.2f,
-                            higherFlapUnfoldingSpeed = 0.0f,
-                    )
+                    ActuatorOutputs(mainMotorSpeed = -0.2f)
                 } else {
                     state = state.copy(generalState = GeneralState.GoingUp)
                     run(sensorInputs)
