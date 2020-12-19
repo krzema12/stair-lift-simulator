@@ -124,7 +124,11 @@ class ControllerLogic {
                     lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized > 0.5f) -0.2f else 0.0f,
                     higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized > 0.5f) -0.2f else 0.0f,
             )
-            State.Driving -> ActuatorOutputs(mainMotorSpeed = if (sensorInputs.goingUpButtonPressed) 0.2f else 0.0f)
+            State.Driving -> ActuatorOutputs(mainMotorSpeed = when {
+                sensorInputs.goingUpButtonPressed -> 0.2f
+                sensorInputs.goingDownButtonPressed -> -0.2f
+                else -> 0.0f
+            })
             State.PreparingForWheelchairLeaving -> ActuatorOutputs(
                     barriersUnfoldingSpeed = if (sensorInputs.barriersPositionNormalized > 0.0f) -0.2f else 0.0f,
                     higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
