@@ -40,14 +40,14 @@ class ControllerLogic {
     }
 
     fun run(sensorInputs: SensorInputs): ActuatorOutputs {
-        state = getNewState(sensorInputs)
+        state = transitionToNextState(sensorInputs)
         return getActuatorOutputs(sensorInputs)
     }
 
     /**
      * Focuses on transitions between states.
      */
-    private fun getNewState(sensorInputs: SensorInputs): State {
+    private fun transitionToNextState(sensorInputs: SensorInputs): State {
         return when (val currentState = state) {
             State.Parked -> if (!sensorInputs.isKeyEnabled) {
                 currentState
