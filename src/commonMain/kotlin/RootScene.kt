@@ -57,6 +57,7 @@ class RootScene : Scene() {
             var isWheelchairPresent = false
             var goingUpButtonPressed = false
             var goingDownButtonPressed = false
+            var displayDebugInfo = false
 
             keys {
                 down(Key.I) { isUpperKeyEnabled = true }
@@ -71,6 +72,8 @@ class RootScene : Scene() {
                 up(Key.UP) { goingUpButtonPressed = false }
                 down(Key.DOWN) { goingDownButtonPressed = true }
                 up(Key.DOWN) { goingDownButtonPressed = false }
+
+                down(Key.D) { displayDebugInfo = !displayDebugInfo }
             }
 
             addUpdater { timeSpan ->
@@ -80,12 +83,18 @@ class RootScene : Scene() {
                         isWheelchairPresent,
                         goingUpButtonPressed,
                         goingDownButtonPressed)
-                sensorInputsText.text = sensorInputs.toString().replace("(", "(\n").replace(",", ",\n")
 
                 val actuatorOutputs = controllerLogic.run(sensorInputs)
-                actuatorOutputsText.text = actuatorOutputs.toString().replace("(", "(\n").replace(",", ",\n")
 
-                controllerStateText.text = "State: ${controllerLogic.state.toString().replace("(", "(\n").replace(",", ",\n")}"
+                if (displayDebugInfo) {
+                    sensorInputsText.text = sensorInputs.toString().replace("(", "(\n").replace(",", ",\n")
+                    actuatorOutputsText.text = actuatorOutputs.toString().replace("(", "(\n").replace(",", ",\n")
+                    controllerStateText.text = "State: ${controllerLogic.state.toString().replace("(", "(\n").replace(",", ",\n")}"
+                } else {
+                    sensorInputsText.text = ""
+                    actuatorOutputsText.text = ""
+                    controllerStateText.text = ""
+                }
 
                 movingParts.executeActuatorOutputs(actuatorOutputs, timeSpan)
             }
