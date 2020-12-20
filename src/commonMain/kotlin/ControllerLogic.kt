@@ -3,7 +3,8 @@ import com.soywiz.klock.TimeProvider
 import com.soywiz.klock.seconds
 
 data class SensorInputs(
-        val isKeyEnabled: Boolean,
+        val isUpperKeyEnabled: Boolean,
+        val isLowerKeyEnabled: Boolean,
         val goingUpButtonPressed: Boolean,
         val goingDownButtonPressed: Boolean,
         val foldablePlatformPositionNormalized: Float,
@@ -49,7 +50,7 @@ class ControllerLogic {
      */
     private fun transitionToNextState(sensorInputs: SensorInputs): State {
         return when (val currentState = state) {
-            State.Parked -> if (!sensorInputs.isKeyEnabled) {
+            State.Parked -> if (!sensorInputs.isLowerKeyEnabled) {
                 currentState
             } else {
                 State.WaitingAfterTurningOn(waitStart = TimeProvider.now())

@@ -52,14 +52,17 @@ class RootScene : Scene() {
             val controllerStateText = Text(text = "").position(2, 670)
             this@sceneInit += controllerStateText
 
-            var isKeyEnabled = false
+            var isUpperKeyEnabled = false
+            var isLowerKeyEnabled = false
             var isWheelchairPresent = false
             var goingUpButtonPressed = false
             var goingDownButtonPressed = false
 
             keys {
-                down(Key.K) { isKeyEnabled = true }
-                up(Key.K) { isKeyEnabled = false }
+                down(Key.I) { isUpperKeyEnabled = true }
+                up(Key.I) { isUpperKeyEnabled = false }
+                down(Key.K) { isLowerKeyEnabled = true }
+                up(Key.K) { isLowerKeyEnabled = false }
 
                 down(Key.W) { isWheelchairPresent = true }
                 down(Key.Q) { isWheelchairPresent = false }
@@ -72,7 +75,8 @@ class RootScene : Scene() {
 
             addUpdater { timeSpan ->
                 val sensorInputs = movingParts.prepareSensorInputs(
-                        isKeyEnabled,
+                        isUpperKeyEnabled,
+                        isLowerKeyEnabled,
                         isWheelchairPresent,
                         goingUpButtonPressed,
                         goingDownButtonPressed)
@@ -105,12 +109,14 @@ data class MovingParts(
 )
 
 @Korge3DExperimental
-private fun MovingParts.prepareSensorInputs(isKeyEnabled: Boolean,
+private fun MovingParts.prepareSensorInputs(isUpperKeyEnabled: Boolean,
+                                            isLowerKeyEnabled: Boolean,
                                             isWheelchairPresent: Boolean,
                                             wantsToGoUp: Boolean,
                                             wantsToGoDown: Boolean): SensorInputs {
     return SensorInputs(
-            isKeyEnabled = isKeyEnabled,
+            isUpperKeyEnabled = isUpperKeyEnabled,
+            isLowerKeyEnabled = isLowerKeyEnabled,
             goingUpButtonPressed = wantsToGoUp,
             goingDownButtonPressed = wantsToGoDown,
             foldablePlatformPositionNormalized = foldablePlatformAnimator.progress,
