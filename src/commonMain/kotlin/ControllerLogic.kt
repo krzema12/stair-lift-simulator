@@ -37,7 +37,7 @@ class ControllerLogic {
         object GoingUpWithoutWheelchair : State()
         object WaitingForWheelchair : State()
         object PreparingForDrivingWithWheelchair : State()
-        object Driving : State()
+        object DrivingWithWheelchair : State()
         object PreparingForWheelchairLeaving : State()
         object WaitingForWheelchairLeaving : State()
         object GoingDown : State()
@@ -106,19 +106,25 @@ class ControllerLogic {
                     sensorInputs.higherFlapPositionNormalized !in 0.45f..0.55f) {
                 currentState
             } else {
-                State.Driving
+                State.DrivingWithWheelchair
             }
-            State.Driving -> if (sensorInputs.mainMotorPositionNormalized < 0.0f && sensorInputs.goingDownButtonPressed ||
+            State.DrivingWithWheelchair -> if (sensorInputs.mainMotorPositionNormalized < 0.0f && sensorInputs.goingDownButtonPressed ||
                     sensorInputs.mainMotorPositionNormalized > 1.0f && sensorInputs.goingUpButtonPressed) {
                 State.PreparingForWheelchairLeaving
             } else {
                 currentState
             }
-            State.PreparingForWheelchairLeaving -> if (sensorInputs.barriersPositionNormalized > 0.0f ||
-                    sensorInputs.higherFlapPositionNormalized < 1.0f) {
-                currentState
-            } else {
-                State.WaitingForWheelchairLeaving
+            State.PreparingForWheelchairLeaving -> {
+                val positionOfFlapDependingOnWheelchairPlace = if (sensorInputs.mainMotorPositionNormalized < 0.0f) {
+                    sensorInputs.lowerFlapPositionNormalized
+                } else {
+                    sensorInputs.higherFlapPositionNormalized
+                }
+                if (sensorInputs.barriersPositionNormalized > 0.0f || positionOfFlapDependingOnWheelchairPlace < 1.0f) {
+                    currentState
+                } else {
+                    State.WaitingForWheelchairLeaving
+                }
             }
             State.WaitingForWheelchairLeaving -> if (sensorInputs.isWheelchairPresent) {
                 currentState
@@ -128,7 +134,7 @@ class ControllerLogic {
             State.GoingDown -> if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
                 currentState
             } else {
-                State.Driving
+                State.DrivingWithWheelchair
             }
         }
     }
@@ -158,15 +164,22 @@ class ControllerLogic {
                     lowerFlapUnfoldingSpeed = (sensorInputs.lowerFlapPositionNormalized - 0.5f).sign * -0.2f,
                     higherFlapUnfoldingSpeed = (sensorInputs.higherFlapPositionNormalized - 0.5f).sign * -0.2f,
             )
-            State.Driving -> ActuatorOutputs(mainMotorSpeed = when {
+            State.DrivingWithWheelchair -> ActuatorOutputs(mainMotorSpeed = when {
                 sensorInputs.goingUpButtonPressed -> 0.2f
                 sensorInputs.goingDownButtonPressed -> -0.2f
                 else -> 0.0f
             })
-            State.PreparingForWheelchairLeaving -> ActuatorOutputs(
-                    barriersUnfoldingSpeed = if (sensorInputs.barriersPositionNormalized > 0.0f) -0.2f else 0.0f,
-                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
-            )
+            State.PreparingForWheelchairLeaving -> {
+                val actuatorOutputsWithoutFlaps = ActuatorOutputs(
+                        barriersUnfoldingSpeed = if (sensorInputs.barriersPositionNormalized > 0.0f) -0.2f else 0.0f)
+                if (sensorInputs.mainMotorPositionNormalized < 0.0f) {
+                    actuatorOutputsWithoutFlaps.copy(
+                            lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f)
+                } else {
+                    actuatorOutputsWithoutFlaps.copy(
+                            higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f)
+                }
+            }
             State.WaitingForWheelchairLeaving -> ActuatorOutputs()
             State.GoingDown -> ActuatorOutputs(mainMotorSpeed = -0.2f)
         }
