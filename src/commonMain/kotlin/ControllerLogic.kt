@@ -40,7 +40,9 @@ class ControllerLogic {
         object DrivingWithWheelchair : State()
         object PreparingForWheelchairLeaving : State()
         object WaitingForWheelchairLeaving : State()
-        object GoingDown : State()
+        object FoldingBothFlapsBeforeParking : State()
+        object FoldingPlatformBeforeParking : State()
+        object GoingDownToPark : State()
     }
 
     enum class EnabledFrom {
@@ -129,12 +131,26 @@ class ControllerLogic {
             State.WaitingForWheelchairLeaving -> if (sensorInputs.isWheelchairPresent) {
                 currentState
             } else {
-                State.GoingDown
+                State.FoldingBothFlapsBeforeParking
             }
-            State.GoingDown -> if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
+            State.FoldingBothFlapsBeforeParking -> if (sensorInputs.lowerFlapPositionNormalized > 0.0f || sensorInputs.higherFlapPositionNormalized > 0.0f) {
                 currentState
             } else {
-                State.DrivingWithWheelchair
+                State.FoldingPlatformBeforeParking
+            }
+            State.FoldingPlatformBeforeParking -> if (sensorInputs.foldablePlatformPositionNormalized > 0.0f) {
+                currentState
+            } else {
+                if (sensorInputs.mainMotorPositionNormalized > 1.0f) {
+                    State.GoingDownToPark
+                } else {
+                    State.Parked
+                }
+            }
+            State.GoingDownToPark -> if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
+                currentState
+            } else {
+                State.Parked
             }
         }
     }
@@ -181,7 +197,13 @@ class ControllerLogic {
                 }
             }
             State.WaitingForWheelchairLeaving -> ActuatorOutputs()
-            State.GoingDown -> ActuatorOutputs(mainMotorSpeed = -0.2f)
+            State.FoldingBothFlapsBeforeParking -> ActuatorOutputs(
+                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized > 0.0f) -0.2f else 0.0f,
+                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized > 0.0f) -0.2f else 0.0f)
+            State.FoldingPlatformBeforeParking -> ActuatorOutputs(
+                    foldablePlatformUnfoldingSpeed = if (sensorInputs.foldablePlatformPositionNormalized > 0.0f) -0.2f else 0.0f)
+            State.GoingDownToPark -> ActuatorOutputs(
+                    mainMotorSpeed = if (sensorInputs.mainMotorPositionNormalized > 0.0f) -0.2f else 0.0f)
         }
     }
 }
