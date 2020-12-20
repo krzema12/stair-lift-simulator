@@ -1,6 +1,7 @@
 import com.soywiz.klock.DateTime
 import com.soywiz.klock.TimeProvider
 import com.soywiz.klock.seconds
+import kotlin.math.sign
 
 data class SensorInputs(
         val isUpperKeyEnabled: Boolean,
@@ -29,15 +30,22 @@ class ControllerLogic {
 
     sealed class State {
         object Parked : State()
-        data class WaitingAfterTurningOn(val waitStart: DateTime) : State()
-        object PlatformUnfolding : State()
-        object UnfoldingBothFlaps : State()
+        data class WaitingAfterTurningOn(val waitStart: DateTime,
+                                         val enabledFrom: EnabledFrom) : State()
+        data class PlatformUnfolding(val enabledFrom: EnabledFrom) : State()
+        data class PreparingBothFlapsForEnteringWheelchair(val enabledFrom: EnabledFrom) : State()
+        object GoingUpWithoutWheelchair : State()
         object WaitingForWheelchair : State()
         object PreparingForDrivingWithWheelchair : State()
         object Driving : State()
         object PreparingForWheelchairLeaving : State()
         object WaitingForWheelchairLeaving : State()
         object GoingDown : State()
+    }
+
+    enum class EnabledFrom {
+        UpperKey,
+        LowerKey,
     }
 
     fun run(sensorInputs: SensorInputs): ActuatorOutputs {
@@ -50,26 +58,43 @@ class ControllerLogic {
      */
     private fun transitionToNextState(sensorInputs: SensorInputs): State {
         return when (val currentState = state) {
-            State.Parked -> if (!sensorInputs.isLowerKeyEnabled) {
-                currentState
-            } else {
-                State.WaitingAfterTurningOn(waitStart = TimeProvider.now())
+            State.Parked -> when {
+                sensorInputs.isUpperKeyEnabled -> State.WaitingAfterTurningOn(waitStart = TimeProvider.now(), enabledFrom = EnabledFrom.UpperKey)
+                sensorInputs.isLowerKeyEnabled -> State.WaitingAfterTurningOn(waitStart = TimeProvider.now(), enabledFrom = EnabledFrom.LowerKey)
+                else -> currentState
             }
             is State.WaitingAfterTurningOn -> if (TimeProvider.now() - currentState.waitStart < 3.seconds) {
                 currentState
             } else {
-                State.PlatformUnfolding
+                when (currentState.enabledFrom) {
+                    EnabledFrom.UpperKey -> State.GoingUpWithoutWheelchair
+                    EnabledFrom.LowerKey -> State.PlatformUnfolding(enabledFrom = currentState.enabledFrom)
+                }
             }
-            State.PlatformUnfolding -> if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
+            is State.PlatformUnfolding -> if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
                 currentState
             } else {
-                State.UnfoldingBothFlaps
+                State.PreparingBothFlapsForEnteringWheelchair(enabledFrom = currentState.enabledFrom)
             }
-            State.UnfoldingBothFlaps -> if (sensorInputs.lowerFlapPositionNormalized < 1.0f ||
-                    sensorInputs.higherFlapPositionNormalized < 1.0f) {
+            is State.PreparingBothFlapsForEnteringWheelchair -> {
+                val higherFlapTargetReached = when (currentState.enabledFrom) {
+                    EnabledFrom.UpperKey -> sensorInputs.higherFlapPositionNormalized > 1.0f
+                    EnabledFrom.LowerKey -> sensorInputs.higherFlapPositionNormalized in 0.45f..0.55f
+                }
+                val lowerFlapTargetReached = when (currentState.enabledFrom) {
+                    EnabledFrom.UpperKey -> sensorInputs.lowerFlapPositionNormalized in 0.45f..0.55f
+                    EnabledFrom.LowerKey -> sensorInputs.lowerFlapPositionNormalized > 1.0f
+                }
+                if (!lowerFlapTargetReached || !higherFlapTargetReached) {
+                    currentState
+                } else {
+                    State.WaitingForWheelchair
+                }
+            }
+            State.GoingUpWithoutWheelchair -> if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
                 currentState
             } else {
-                State.WaitingForWheelchair
+                State.PlatformUnfolding(enabledFrom = EnabledFrom.UpperKey)
             }
             State.WaitingForWheelchair -> if (!sensorInputs.isWheelchairPresent) {
                 currentState
@@ -77,16 +102,17 @@ class ControllerLogic {
                 State.PreparingForDrivingWithWheelchair
             }
             State.PreparingForDrivingWithWheelchair -> if (sensorInputs.barriersPositionNormalized < 1.0f ||
-                    sensorInputs.lowerFlapPositionNormalized > 0.5f ||
-                    sensorInputs.higherFlapPositionNormalized > 0.5f) {
+                    sensorInputs.lowerFlapPositionNormalized !in 0.45f..0.55f ||
+                    sensorInputs.higherFlapPositionNormalized !in 0.45f..0.55f) {
                 currentState
             } else {
                 State.Driving
             }
-            State.Driving -> if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
-                currentState
-            } else {
+            State.Driving -> if (sensorInputs.mainMotorPositionNormalized < 0.0f && sensorInputs.goingDownButtonPressed ||
+                    sensorInputs.mainMotorPositionNormalized > 1.0f && sensorInputs.goingUpButtonPressed) {
                 State.PreparingForWheelchairLeaving
+            } else {
+                currentState
             }
             State.PreparingForWheelchairLeaving -> if (sensorInputs.barriersPositionNormalized > 0.0f ||
                     sensorInputs.higherFlapPositionNormalized < 1.0f) {
@@ -111,19 +137,26 @@ class ControllerLogic {
      * Focuses on what happens in a given state.
      */
     private fun getActuatorOutputs(sensorInputs: SensorInputs): ActuatorOutputs {
-        return when (state) {
+        return when (val currentState = state) {
             State.Parked -> ActuatorOutputs()
             is State.WaitingAfterTurningOn -> ActuatorOutputs()
-            State.PlatformUnfolding -> ActuatorOutputs(foldablePlatformUnfoldingSpeed = 0.2f)
-            State.UnfoldingBothFlaps -> ActuatorOutputs(
-                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
-                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
+            is State.PlatformUnfolding -> ActuatorOutputs(foldablePlatformUnfoldingSpeed = 0.2f)
+            is State.PreparingBothFlapsForEnteringWheelchair -> ActuatorOutputs(
+                    lowerFlapUnfoldingSpeed = when (currentState.enabledFrom) {
+                        EnabledFrom.UpperKey -> (sensorInputs.lowerFlapPositionNormalized - 0.5f).sign * -0.2f
+                        EnabledFrom.LowerKey -> if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f
+                    },
+                    higherFlapUnfoldingSpeed = when (currentState.enabledFrom) {
+                        EnabledFrom.UpperKey -> if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f
+                        EnabledFrom.LowerKey -> (sensorInputs.higherFlapPositionNormalized - 0.5f).sign * -0.2f
+                    }
             )
+            State.GoingUpWithoutWheelchair -> ActuatorOutputs(mainMotorSpeed = 0.2f)
             State.WaitingForWheelchair -> ActuatorOutputs()
             State.PreparingForDrivingWithWheelchair -> ActuatorOutputs(
                     barriersUnfoldingSpeed = if (sensorInputs.barriersPositionNormalized < 1.0f) 0.2f else 0.0f,
-                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized > 0.5f) -0.2f else 0.0f,
-                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized > 0.5f) -0.2f else 0.0f,
+                    lowerFlapUnfoldingSpeed = (sensorInputs.lowerFlapPositionNormalized - 0.5f).sign * -0.2f,
+                    higherFlapUnfoldingSpeed = (sensorInputs.higherFlapPositionNormalized - 0.5f).sign * -0.2f,
             )
             State.Driving -> ActuatorOutputs(mainMotorSpeed = when {
                 sensorInputs.goingUpButtonPressed -> 0.2f
