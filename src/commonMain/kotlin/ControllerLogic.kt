@@ -29,20 +29,143 @@ class ControllerLogic {
     private set
 
     sealed class State {
-        object Parked : State()
+        abstract fun transitionToNextState(sensorInputs: SensorInputs): State
+
+        object Parked : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) =
+                    when {
+                        sensorInputs.isUpperKeyEnabled -> WaitingAfterTurningOn(waitStart = TimeProvider.now(), enabledFrom = EnabledFrom.UpperKey)
+                        sensorInputs.isLowerKeyEnabled -> WaitingAfterTurningOn(waitStart = TimeProvider.now(), enabledFrom = EnabledFrom.LowerKey)
+                        else -> this
+                    }
+        }
+
         data class WaitingAfterTurningOn(val waitStart: DateTime,
-                                         val enabledFrom: EnabledFrom) : State()
-        data class PlatformUnfolding(val enabledFrom: EnabledFrom) : State()
-        data class PreparingBothFlapsForEnteringWheelchair(val enabledFrom: EnabledFrom) : State()
-        object GoingUpWithoutWheelchair : State()
-        object WaitingForWheelchair : State()
-        object PreparingForDrivingWithWheelchair : State()
-        object DrivingWithWheelchair : State()
-        object PreparingForWheelchairLeaving : State()
-        object WaitingForWheelchairLeaving : State()
-        object FoldingBothFlapsBeforeParking : State()
-        object FoldingPlatformBeforeParking : State()
-        object GoingDownToPark : State()
+                                         val enabledFrom: EnabledFrom) : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) =
+                    if (TimeProvider.now() - waitStart < 3.seconds) {
+                        this
+                    } else {
+                        when (enabledFrom) {
+                            EnabledFrom.UpperKey -> GoingUpWithoutWheelchair
+                            EnabledFrom.LowerKey -> PlatformUnfolding(enabledFrom = enabledFrom)
+                        }
+                    }
+        }
+
+        data class PlatformUnfolding(val enabledFrom: EnabledFrom) : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) =
+                    if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
+                        this
+                    } else {
+                        PreparingBothFlapsForEnteringWheelchair(enabledFrom = enabledFrom)
+                    }
+        }
+
+        data class PreparingBothFlapsForEnteringWheelchair(val enabledFrom: EnabledFrom) : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs): State {
+                val higherFlapTargetReached = when (enabledFrom) {
+                    EnabledFrom.UpperKey -> sensorInputs.higherFlapPositionNormalized > 1.0f
+                    EnabledFrom.LowerKey -> sensorInputs.higherFlapPositionNormalized in 0.45f..0.55f
+                }
+                val lowerFlapTargetReached = when (enabledFrom) {
+                    EnabledFrom.UpperKey -> sensorInputs.lowerFlapPositionNormalized in 0.45f..0.55f
+                    EnabledFrom.LowerKey -> sensorInputs.lowerFlapPositionNormalized > 1.0f
+                }
+                return if (!lowerFlapTargetReached || !higherFlapTargetReached) {
+                    this
+                } else {
+                    WaitingForWheelchair
+                }
+            }
+        }
+
+        object GoingUpWithoutWheelchair : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) =
+                    if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
+                        this
+                    } else {
+                        PlatformUnfolding(enabledFrom = EnabledFrom.UpperKey)
+                    }
+        }
+
+        object WaitingForWheelchair : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (!sensorInputs.isWheelchairPresent) {
+                this
+            } else {
+                PreparingForDrivingWithWheelchair
+            }
+        }
+
+        object PreparingForDrivingWithWheelchair : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.barriersPositionNormalized < 1.0f ||
+                    sensorInputs.lowerFlapPositionNormalized !in 0.45f..0.55f ||
+                    sensorInputs.higherFlapPositionNormalized !in 0.45f..0.55f) {
+                this
+            } else {
+                DrivingWithWheelchair
+            }
+        }
+
+        object DrivingWithWheelchair : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.mainMotorPositionNormalized < 0.0f && sensorInputs.goingDownButtonPressed ||
+                    sensorInputs.mainMotorPositionNormalized > 1.0f && sensorInputs.goingUpButtonPressed) {
+                PreparingForWheelchairLeaving
+            } else {
+                this
+            }
+        }
+
+        object PreparingForWheelchairLeaving : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs): State {
+                val positionOfFlapDependingOnWheelchairPlace = if (sensorInputs.mainMotorPositionNormalized < 0.0f) {
+                    sensorInputs.lowerFlapPositionNormalized
+                } else {
+                    sensorInputs.higherFlapPositionNormalized
+                }
+                return if (sensorInputs.barriersPositionNormalized > 0.0f || positionOfFlapDependingOnWheelchairPlace < 1.0f) {
+                    this
+                } else {
+                    WaitingForWheelchairLeaving
+                }
+            }
+        }
+
+        object WaitingForWheelchairLeaving : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.isWheelchairPresent) {
+                this
+            } else {
+                FoldingBothFlapsBeforeParking
+            }
+        }
+
+        object FoldingBothFlapsBeforeParking : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.lowerFlapPositionNormalized > 0.0f || sensorInputs.higherFlapPositionNormalized > 0.0f) {
+                this
+            } else {
+                FoldingPlatformBeforeParking
+            }
+        }
+
+        object FoldingPlatformBeforeParking : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.foldablePlatformPositionNormalized > 0.0f) {
+                this
+            } else {
+                if (sensorInputs.mainMotorPositionNormalized > 1.0f) {
+                    GoingDownToPark
+                } else {
+                    Parked
+                }
+            }
+        }
+
+        object GoingDownToPark : State() {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
+                this
+            } else {
+                Parked
+            }
+        }
     }
 
     enum class EnabledFrom {
@@ -51,108 +174,8 @@ class ControllerLogic {
     }
 
     fun run(sensorInputs: SensorInputs): ActuatorOutputs {
-        state = transitionToNextState(sensorInputs)
+        state = state.transitionToNextState(sensorInputs)
         return getActuatorOutputs(sensorInputs)
-    }
-
-    /**
-     * Focuses on transitions between states.
-     */
-    private fun transitionToNextState(sensorInputs: SensorInputs): State {
-        return when (val currentState = state) {
-            State.Parked -> when {
-                sensorInputs.isUpperKeyEnabled -> State.WaitingAfterTurningOn(waitStart = TimeProvider.now(), enabledFrom = EnabledFrom.UpperKey)
-                sensorInputs.isLowerKeyEnabled -> State.WaitingAfterTurningOn(waitStart = TimeProvider.now(), enabledFrom = EnabledFrom.LowerKey)
-                else -> currentState
-            }
-            is State.WaitingAfterTurningOn -> if (TimeProvider.now() - currentState.waitStart < 3.seconds) {
-                currentState
-            } else {
-                when (currentState.enabledFrom) {
-                    EnabledFrom.UpperKey -> State.GoingUpWithoutWheelchair
-                    EnabledFrom.LowerKey -> State.PlatformUnfolding(enabledFrom = currentState.enabledFrom)
-                }
-            }
-            is State.PlatformUnfolding -> if (sensorInputs.foldablePlatformPositionNormalized < 1.0f) {
-                currentState
-            } else {
-                State.PreparingBothFlapsForEnteringWheelchair(enabledFrom = currentState.enabledFrom)
-            }
-            is State.PreparingBothFlapsForEnteringWheelchair -> {
-                val higherFlapTargetReached = when (currentState.enabledFrom) {
-                    EnabledFrom.UpperKey -> sensorInputs.higherFlapPositionNormalized > 1.0f
-                    EnabledFrom.LowerKey -> sensorInputs.higherFlapPositionNormalized in 0.45f..0.55f
-                }
-                val lowerFlapTargetReached = when (currentState.enabledFrom) {
-                    EnabledFrom.UpperKey -> sensorInputs.lowerFlapPositionNormalized in 0.45f..0.55f
-                    EnabledFrom.LowerKey -> sensorInputs.lowerFlapPositionNormalized > 1.0f
-                }
-                if (!lowerFlapTargetReached || !higherFlapTargetReached) {
-                    currentState
-                } else {
-                    State.WaitingForWheelchair
-                }
-            }
-            State.GoingUpWithoutWheelchair -> if (sensorInputs.mainMotorPositionNormalized < 1.0f) {
-                currentState
-            } else {
-                State.PlatformUnfolding(enabledFrom = EnabledFrom.UpperKey)
-            }
-            State.WaitingForWheelchair -> if (!sensorInputs.isWheelchairPresent) {
-                currentState
-            } else {
-                State.PreparingForDrivingWithWheelchair
-            }
-            State.PreparingForDrivingWithWheelchair -> if (sensorInputs.barriersPositionNormalized < 1.0f ||
-                    sensorInputs.lowerFlapPositionNormalized !in 0.45f..0.55f ||
-                    sensorInputs.higherFlapPositionNormalized !in 0.45f..0.55f) {
-                currentState
-            } else {
-                State.DrivingWithWheelchair
-            }
-            State.DrivingWithWheelchair -> if (sensorInputs.mainMotorPositionNormalized < 0.0f && sensorInputs.goingDownButtonPressed ||
-                    sensorInputs.mainMotorPositionNormalized > 1.0f && sensorInputs.goingUpButtonPressed) {
-                State.PreparingForWheelchairLeaving
-            } else {
-                currentState
-            }
-            State.PreparingForWheelchairLeaving -> {
-                val positionOfFlapDependingOnWheelchairPlace = if (sensorInputs.mainMotorPositionNormalized < 0.0f) {
-                    sensorInputs.lowerFlapPositionNormalized
-                } else {
-                    sensorInputs.higherFlapPositionNormalized
-                }
-                if (sensorInputs.barriersPositionNormalized > 0.0f || positionOfFlapDependingOnWheelchairPlace < 1.0f) {
-                    currentState
-                } else {
-                    State.WaitingForWheelchairLeaving
-                }
-            }
-            State.WaitingForWheelchairLeaving -> if (sensorInputs.isWheelchairPresent) {
-                currentState
-            } else {
-                State.FoldingBothFlapsBeforeParking
-            }
-            State.FoldingBothFlapsBeforeParking -> if (sensorInputs.lowerFlapPositionNormalized > 0.0f || sensorInputs.higherFlapPositionNormalized > 0.0f) {
-                currentState
-            } else {
-                State.FoldingPlatformBeforeParking
-            }
-            State.FoldingPlatformBeforeParking -> if (sensorInputs.foldablePlatformPositionNormalized > 0.0f) {
-                currentState
-            } else {
-                if (sensorInputs.mainMotorPositionNormalized > 1.0f) {
-                    State.GoingDownToPark
-                } else {
-                    State.Parked
-                }
-            }
-            State.GoingDownToPark -> if (sensorInputs.mainMotorPositionNormalized > 0.0f) {
-                currentState
-            } else {
-                State.Parked
-            }
-        }
     }
 
     /**
