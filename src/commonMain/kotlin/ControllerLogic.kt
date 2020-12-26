@@ -65,12 +65,12 @@ class ControllerLogic {
         data class PreparingBothFlapsForEnteringWheelchair(val enabledFrom: EnabledFrom) : State() {
             override fun transitionToNextState(sensorInputs: SensorInputs): State {
                 val higherFlapTargetReached = when (enabledFrom) {
-                    EnabledFrom.UpperKey -> sensorInputs.higherFlapPositionNormalized > 1.0f
+                    EnabledFrom.UpperKey -> sensorInputs.higherFlapPositionNormalized >= 1.0f
                     EnabledFrom.LowerKey -> sensorInputs.higherFlapPositionNormalized in 0.45f..0.55f
                 }
                 val lowerFlapTargetReached = when (enabledFrom) {
                     EnabledFrom.UpperKey -> sensorInputs.lowerFlapPositionNormalized in 0.45f..0.55f
-                    EnabledFrom.LowerKey -> sensorInputs.lowerFlapPositionNormalized > 1.0f
+                    EnabledFrom.LowerKey -> sensorInputs.lowerFlapPositionNormalized >= 1.0f
                 }
                 return if (!lowerFlapTargetReached || !higherFlapTargetReached) {
                     this
@@ -140,7 +140,7 @@ class ControllerLogic {
         }
 
         object FoldingBothFlapsBeforeParking : State() {
-            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.lowerFlapPositionNormalized > 0.0f || sensorInputs.higherFlapPositionNormalized > 0.0f) {
+            override fun transitionToNextState(sensorInputs: SensorInputs) = if (sensorInputs.lowerFlapPositionNormalized < 1.0f || sensorInputs.higherFlapPositionNormalized < 1.0f) {
                 this
             } else {
                 FoldingPlatformBeforeParking
@@ -221,8 +221,8 @@ class ControllerLogic {
             }
             State.WaitingForWheelchairLeaving -> ActuatorOutputs()
             State.FoldingBothFlapsBeforeParking -> ActuatorOutputs(
-                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized > 0.0f) -0.2f else 0.0f,
-                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized > 0.0f) -0.2f else 0.0f)
+                    higherFlapUnfoldingSpeed = if (sensorInputs.higherFlapPositionNormalized < 1.0f) 0.2f else 0.0f,
+                    lowerFlapUnfoldingSpeed = if (sensorInputs.lowerFlapPositionNormalized < 1.0f) 0.2f else 0.0f)
             State.FoldingPlatformBeforeParking -> ActuatorOutputs(
                     foldablePlatformUnfoldingSpeed = if (sensorInputs.foldablePlatformPositionNormalized > 0.0f) -0.2f else 0.0f)
             State.GoingDownToPark -> ActuatorOutputs(

@@ -29,7 +29,9 @@ class RootScene : Scene() {
             val drivingUpAndDownAnimator = library.getAnimator("Driving_up_and_down_Driving_up_and_downAction_transform", mainSceneView)
             val foldablePlatformAnimator = library.getAnimator("Foldable_platform_Foldable_platformAction_transform", mainSceneView)
             val lowerFlapAnimator = library.getAnimator("Lower_flap_Lower_flapAction_transform", mainSceneView)
+            lowerFlapAnimator.progress = 1.0f
             val higherFlapAnimator = library.getAnimator("Higher_flap_Higher_flapAction_transform", mainSceneView)
+            higherFlapAnimator.progress = 1.0f
             val barriersAnimator = library.getAnimator("Barriers_BarriersAction_transform", mainSceneView)
 
             val cameraFromModel = mainSceneView.findByType<Camera3D>().firstOrNull()
