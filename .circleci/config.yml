@@ -9,6 +9,7 @@ jobs:
     steps:
       - checkout
       - run: ./gradlew --version
+      - run: ./gradlew tasks
       - run: ./gradlew jsBrowserDistribution
       - run:
           name: Publish to GitHub Pages
