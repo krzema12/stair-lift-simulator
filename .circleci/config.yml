@@ -1,0 +1,49 @@
+version: 2
+jobs:
+  buildAndDeployWeb:
+    docker:
+      - image: circleci/openjdk:8-jdk-node-browsers
+    working_directory: ~/repo
+    environment:
+      CHROME_BIN: "/usr/bin/google-chrome"
+    steps:
+      - checkout
+      - run: ./gradlew --version
+      - run: ./gradlew jsBrowserDistribution
+      - run:
+          name: Publish to GitHub Pages
+          command: |
+            set -e
+
+            if [ $CIRCLE_BRANCH != "master" ]
+            then
+                echo "Not on master branch - skipping"
+                exit 0
+            fi
+
+            git config --global user.email "builds@circleci.com"
+            git config --global user.name "CircleCI"
+
+            git clone --single-branch --branch gh-pages https://${GITHUB_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git gh-pages
+            cd gh-pages
+            git checkout --orphan gh-pages-new
+            git rm -rf .
+            mkdir .circleci
+
+            cd ..
+            cp -av build/distributions gh-pages
+            cp .circleci/config-github-pages.yml gh-pages/.circleci/config.yml
+            cd gh-pages
+            mv distributions/* .
+
+            git add -A
+            git commit -m "Circle CI deployment to GitHub Pages: ${CIRCLE_SHA1}" --allow-empty
+            git branch -D gh-pages
+            git branch -m gh-pages-new gh-pages
+            git push --force origin gh-pages
+
+workflows:
+  version: 2
+  Tests:
+    jobs:
+      - buildAndDeployWeb
