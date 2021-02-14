@@ -11,6 +11,7 @@ import com.soywiz.korge3d.Camera3D
 import com.soywiz.korge3d.Korge3DExperimental
 import com.soywiz.korge3d.Library3D
 import com.soywiz.korge3d.View3D
+import com.soywiz.korge3d.animation.Animator3D
 import com.soywiz.korge3d.findByType
 import com.soywiz.korge3d.format.readColladaLibrary
 import com.soywiz.korge3d.instantiate
@@ -33,6 +34,14 @@ class RootScene : Scene() {
             val higherFlapAnimator = library.getAnimator("Higher_flap_Higher_flapAction_transform", mainSceneView)
             higherFlapAnimator.progress = 1.0f
             val barriersAnimator = library.getAnimator("Barriers_BarriersAction_transform", mainSceneView)
+
+            val allAnimators = listOf(
+                drivingUpAndDownAnimator,
+                foldablePlatformAnimator,
+                lowerFlapAnimator,
+                higherFlapAnimator,
+                barriersAnimator,
+            )
 
             val cameraFromModel = mainSceneView.findByType<Camera3D>().firstOrNull()
                     ?: throw RuntimeException("Camera not found in the model")
@@ -99,6 +108,8 @@ class RootScene : Scene() {
                 }
 
                 movingParts.executeActuatorOutputs(actuatorOutputs, timeSpan)
+
+                allAnimators.forEach { it.animator3D.update(timeSpan) }
             }
         }
     }
@@ -107,7 +118,7 @@ class RootScene : Scene() {
 @Korge3DExperimental
 private fun Library3D.getAnimator(name: String, mainSceneView: View3D): RandomAccessAnimator {
     val animation = animationDefs[name] ?: throw IllegalArgumentException("Could not find animation with name '$name'")
-    return RandomAccessAnimator(animation, mainSceneView)
+    return RandomAccessAnimator(Animator3D(animation, mainSceneView))
 }
 
 @Korge3DExperimental
